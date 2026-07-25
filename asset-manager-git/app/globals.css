@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c1917;
+  --color-paper: #faf7f2;
+  --color-brand: #2d5a4a;
+  --color-brand-light: #4a7c69;
+  --color-gold: #b8862e;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
