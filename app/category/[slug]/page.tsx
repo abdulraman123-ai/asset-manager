@@ -1,31 +1,61 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   EmptyState,
   Filters,
   type FilterState,
-  PageHeader,
   Pagination,
   ProductCard,
   SearchBar,
   SortDropdown,
 } from '@/components/products';
-import { products } from '@/lib/products-data';
+import {
+  categories,
+  getCategoryDescription,
+  getProductsByCategory,
+} from '@/lib/products-data';
 import { cn } from '@/lib/utils';
 
 const PRODUCTS_PER_PAGE = 9;
 
-const defaultFilters: FilterState = {
-  selectedCategories: [],
-  priceRange: [0, 200],
-  selectedTypes: [],
-  onlyNew: false,
-  onlyPopular: false,
-  minRating: 0,
-};
+export default function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const [slug, setSlug] = useState<string | null>(null);
 
-export default function ProductsPage() {
+  useState(() => {
+    params.then((p) => setSlug(p.slug));
+  });
+
+  const categoryName = useMemo(() => {
+    if (!slug) return null;
+    return (
+      categories.find((c) => c.toLowerCase().replace(/\s+/g, '-') === slug) ??
+      null
+    );
+  }, [slug]);
+
+  const categoryProducts = useMemo(
+    () => (categoryName ? getProductsByCategory(categoryName) : []),
+    [categoryName],
+  );
+
+  const defaultFilters: FilterState = useMemo(
+    () => ({
+      selectedCategories: categoryName ? [categoryName] : [],
+      priceRange: [0, 200],
+      selectedTypes: [],
+      onlyNew: false,
+      onlyPopular: false,
+      minRating: 0,
+    }),
+    [categoryName],
+  );
+
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [sort, setSort] = useState('newest');
@@ -41,9 +71,11 @@ export default function ProductsPage() {
     (filters.priceRange[1] < 200 ? 1 : 0);
 
   const filteredProducts = useMemo(() => {
+    if (!categoryName) return [];
+
     const query = search.trim().toLowerCase();
 
-    const filtered = products.filter((product) => {
+    const filtered = categoryProducts.filter((product) => {
       if (query) {
         const matchesTitle = product.title.toLowerCase().includes(query);
         const matchesDescription = product.description
@@ -100,7 +132,7 @@ export default function ProductsPage() {
     });
 
     return sorted;
-  }, [search, filters, sort]);
+  }, [categoryName, categoryProducts, search, filters, sort]);
 
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   const currentPageClamped = Math.min(currentPage, Math.max(totalPages, 1));
@@ -126,21 +158,102 @@ export default function ProductsPage() {
     setCurrentPage(1);
   };
 
+  if (!slug) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-sm text-text-secondary">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!categoryName) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 text-center">
+        <h1 className="text-3xl font-semibold tracking-tighter text-text-primary">
+          Category not found
+        </h1>
+        <p className="mt-3 text-base text-text-secondary">
+          The category you are looking for does not exist or has been moved.
+        </p>
+        <Link
+          href="/products"
+          className="mt-6 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover press-scale"
+        >
+          Browse all products
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <>
-      <PageHeader
-        title="All Products"
-        description="Browse our curated collection of premium digital products — AI tools, templates, UI kits, source code, courses, and more."
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Products' }]}
-      />
+      {/* Category Banner */}
+      <section className="relative overflow-hidden border-b border-border bg-surface py-16">
+        <div className="absolute inset-0 hero-grid-bg hero-radial-fade" />
+        <div className="absolute inset-0 bg-accent/10 blur-[100px] rounded-full" />
 
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Breadcrumbs */}
+          <nav
+            className="flex items-center gap-2 text-sm"
+            aria-label="Breadcrumb"
+          >
+            <Link
+              href="/"
+              className="text-text-secondary transition-colors hover:text-text-primary"
+            >
+              Home
+            </Link>
+            <span className="text-text-secondary">/</span>
+            <Link
+              href="/products"
+              className="text-text-secondary transition-colors hover:text-text-primary"
+            >
+              Products
+            </Link>
+            <span className="text-text-secondary">/</span>
+            <span className="text-text-primary">{categoryName}</span>
+          </nav>
+
+          {/* Category title */}
+          <h1 className="mt-4 text-4xl font-semibold tracking-tighter text-text-primary sm:text-5xl">
+            {categoryName}
+          </h1>
+
+          {/* Category description */}
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg">
+            {getCategoryDescription(categoryName)}
+          </p>
+
+          {/* Product count badge */}
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent-subtle px-3 py-1 text-sm font-medium text-accent">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M4 4h16v16H4z" />
+              <path d="M4 9h16M9 4v16" />
+            </svg>
+            {categoryProducts.length}{' '}
+            {categoryProducts.length === 1 ? 'product' : 'products'}
+          </div>
+        </div>
+      </section>
+
+      {/* Main content */}
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Search + Sort bar */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <SearchBar
             value={search}
             onChange={handleSearchChange}
-            placeholder="Search products..."
+            placeholder={`Search in ${categoryName}...`}
             className="sm:max-w-md"
           />
           <div className="flex items-center gap-3">
@@ -192,7 +305,8 @@ export default function ProductsPage() {
               <span className="font-medium text-text-primary">
                 {filteredProducts.length}
               </span>{' '}
-              products
+              {filteredProducts.length === 1 ? 'product' : 'products'} in{' '}
+              {categoryName}
             </p>
 
             {paginatedProducts.length > 0 ? (
