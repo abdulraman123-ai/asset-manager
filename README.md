@@ -1,8 +1,8 @@
-# Digital Products Platform
+# Axion Marketplace
 
-**What's actually working right now:** the design system (Tailwind v4, shadcn/ui-pattern components), Supabase-backed sign-up/sign-in, a product listing and detail page reading real data, and a checkout flow that's correctly wired end-to-end through auth and the database — short of live Lemon Squeezy credentials, which isn't done yet on purpose (see below).
+**What's actually working right now:** the full dark "Midnight Premium" design, Supabase-backed sign-up/sign-in, product listing and detail pages reading real data, a founder-gated admin page for adding products, checkout wired end-to-end through auth and the database, and — new — **actual download delivery**: a "My Purchases" dashboard and a download route that only serves a file to someone who genuinely bought it, enforced by the database itself (RLS), not just application code.
 
-**What's NOT built yet:** the customer dashboard, actual file downloads after purchase, and the later-stage milestones — SEO, performance, accessibility, error handling, automated testing, production deployment hardening.
+**What's NOT built yet:** categories (there's a column for it, no UI yet), and the later-stage polish items — SEO, performance, accessibility, error handling, automated testing, production deployment hardening.
 
 **On Lemon Squeezy specifically:** the checkout and webhook code is complete and will build/deploy fine as-is. It just can't actually process a real payment until a Lemon Squeezy account is fully registered and its keys are added to `.env.local` / Vercel. Trying to buy something before then fails with a clear, expected error — that's correct behavior, not a bug.
 

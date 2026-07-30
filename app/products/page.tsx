@@ -1,265 +1,42 @@
-'use client';
+import { createClient } from "@/lib/supabase/server";
+import { ProductCard } from "@/components/product-card";
+import { SiteNav } from "@/components/site-nav";
 
-import { useMemo, useState } from 'react';
-import {
-  EmptyState,
-  Filters,
-  type FilterState,
-  PageHeader,
-  Pagination,
-  ProductCard,
-  SearchBar,
-  SortDropdown,
-} from '@/components/products';
-import { products } from '@/lib/products-data';
-import { cn } from '@/lib/utils';
+export default async function ProductsPage() {
+  const supabase = await createClient();
 
-const PRODUCTS_PER_PAGE = 9;
-
-const defaultFilters: FilterState = {
-  selectedCategories: [],
-  priceRange: [0, 200],
-  selectedTypes: [],
-  onlyNew: false,
-  onlyPopular: false,
-  minRating: 0,
-};
-
-export default function ProductsPage() {
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
-  const [sort, setSort] = useState('newest');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-
-  const activeFilterCount =
-    filters.selectedCategories.length +
-    filters.selectedTypes.length +
-    (filters.onlyNew ? 1 : 0) +
-    (filters.onlyPopular ? 1 : 0) +
-    (filters.minRating > 0 ? 1 : 0) +
-    (filters.priceRange[1] < 200 ? 1 : 0);
-
-  const filteredProducts = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    const filtered = products.filter((product) => {
-      if (query) {
-        const matchesTitle = product.title.toLowerCase().includes(query);
-        const matchesDescription = product.description
-          .toLowerCase()
-          .includes(query);
-        if (!matchesTitle && !matchesDescription) return false;
-      }
-
-      if (
-        filters.selectedCategories.length > 0 &&
-        !filters.selectedCategories.includes(product.category)
-      ) {
-        return false;
-      }
-
-      if (product.price > filters.priceRange[1]) {
-        return false;
-      }
-
-      if (
-        filters.selectedTypes.length > 0 &&
-        !filters.selectedTypes.includes(product.type)
-      ) {
-        return false;
-      }
-
-      if (filters.onlyNew && !product.isNew) return false;
-      if (filters.onlyPopular && !product.isPopular) return false;
-      if (product.rating < filters.minRating) return false;
-
-      return true;
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sort) {
-        case 'oldest':
-          return (
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'popular':
-          return b.downloads - a.downloads;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'newest':
-        default:
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-      }
-    });
-
-    return sorted;
-  }, [search, filters, sort]);
-
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const currentPageClamped = Math.min(currentPage, Math.max(totalPages, 1));
-  const paginatedProducts = filteredProducts.slice(
-    (currentPageClamped - 1) * PRODUCTS_PER_PAGE,
-    currentPageClamped * PRODUCTS_PER_PAGE,
-  );
-
-  const handleFiltersChange = (next: FilterState) => {
-    setFilters(next);
-    setCurrentPage(1);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setCurrentPage(1);
-  };
-
-  const handleReset = () => {
-    setSearch('');
-    setFilters(defaultFilters);
-    setSort('newest');
-    setCurrentPage(1);
-  };
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, slug, description, price_cents")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
 
   return (
-    <>
-      <PageHeader
-        title="All Products"
-        description="Browse our curated collection of premium digital products — AI tools, templates, UI kits, source code, courses, and more."
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Products' }]}
-      />
+    <div className="flex flex-1 flex-col">
+      <SiteNav />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-16 sm:px-12">
+        <h1 className="text-4xl font-semibold tracking-tight text-text-primary">
+          Products
+        </h1>
 
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Search + Sort bar */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <SearchBar
-            value={search}
-            onChange={handleSearchChange}
-            placeholder="Search products..."
-            className="sm:max-w-md"
-          />
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(true)}
-              className="relative flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-text-primary transition-colors hover:border-accent/50 lg:hidden"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-              >
-                <path d="M4 6h16M7 12h10M10 18h4" />
-              </svg>
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-            <SortDropdown value={sort} onChange={setSort} />
+        {!products || products.length === 0 ? (
+          <p className="mt-8 text-text-secondary">
+            No products published yet — check back soon.
+          </p>
+        ) : (
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <ProductCard
+                key={product.id}
+                slug={product.slug}
+                name={product.name}
+                description={product.description}
+                priceCents={product.price_cents}
+              />
+            ))}
           </div>
-        </div>
-
-        <div className="mt-8 flex gap-8">
-          {/* Desktop sidebar */}
-          <aside className="hidden w-64 shrink-0 lg:block">
-            <div className="sticky top-6">
-              <Filters filters={filters} onChange={handleFiltersChange} />
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <div className="min-w-0 flex-1">
-            {/* Results count */}
-            <p className="mb-5 text-sm text-text-secondary">
-              Showing{' '}
-              <span className="font-medium text-text-primary">
-                {paginatedProducts.length}
-              </span>{' '}
-              of{' '}
-              <span className="font-medium text-text-primary">
-                {filteredProducts.length}
-              </span>{' '}
-              products
-            </p>
-
-            {paginatedProducts.length > 0 ? (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState onReset={handleReset} />
-            )}
-
-            {totalPages > 1 && (
-              <div className="mt-10 flex justify-center">
-                <Pagination
-                  currentPage={currentPageClamped}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile filters drawer */}
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-overlay lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setMobileFiltersOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            className={cn(
-              'absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto bg-surface p-5 animate-slide-in-left',
-            )}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text-primary">
-                Filters
-              </h2>
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(false)}
-                aria-label="Close filters"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-elevated text-text-secondary transition-colors hover:text-text-primary"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
-            <Filters filters={filters} onChange={handleFiltersChange} />
-          </div>
-        </div>
-      )}
-    </>
+        )}
+      </main>
+    </div>
   );
 }

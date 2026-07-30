@@ -1,11 +1,24 @@
-import type { Metadata } from 'next';
-import { GeistSans, GeistMono } from 'geist/font';
-import './globals.css';
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+// The ported design uses Geist (Vercel's font family). Loading it via
+// next/font/google, same pattern as before — optimized automatically,
+// no separate font files to manage.
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+});
 
 export const metadata: Metadata = {
-  title: 'Vault — Premium Digital Products Platform',
+  title: "Axion Marketplace — Premium Digital Products",
   description:
-    'Discover premium AI tools, SaaS templates, source code, UI kits, and design assets. Instant downloads, lifetime updates, and expert support.',
+    "Discover premium templates, UI kits, source code, courses, and ebooks. Instant downloads, built by makers, for makers.",
 };
 
 export default function RootLayout({
@@ -16,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
